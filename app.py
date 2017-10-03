@@ -1,21 +1,31 @@
-from flask import Flask, abort, request
+from flask import Flask, abort, request, jsonify
 from datetime import datetime
-from flask import jsonify
 from functools import wraps
+import rate_limiters
 
 app = Flask(__name__)
+rate_limiter = rate_limiters.DummyRateLimiter("dummy_requests", limit_per_minute=100)
 
 
-def throttle_request(function):
+def rate_limit(function):
     def wrapper():
         user_id = request.args.get('user_id')
-        # Block anonymous requests
-        if user_id == None:
-            return abort(503, "blocked anonymous request. Please pass user_id.")
+        if rate_limiter.can_allow(user_id):
+            return function()
+        return abort(503, "Rate limit reached")
+    return wrapper
 
-        # Block a particular user_id
-        if user_id == "1":
-            abort(503, "Blocked for user")
+
+"""
+Very simple auth.
+Checks for a user_id to be present in the URL.
+Blocks anonymous requests with a 503 status.
+"""
+def authenticate(function):
+    def wrapper():
+        user_id = request.args.get('user_id')
+        if user_id == None:
+            return abort(503, "Blocked anonymous request. Please pass user_id in the url")
 
         return function()
     return wrapper
@@ -28,7 +38,8 @@ def index():
 
 
 @app.route('/api/date')
-@throttle_request
+@authenticate
+@rate_limit
 def date():
     readable_timestamp = str(datetime.now())
     response = {'now': readable_timestamp}
