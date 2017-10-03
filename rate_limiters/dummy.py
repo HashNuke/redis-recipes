@@ -1,5 +1,5 @@
 class DummyRateLimiter:
-    def __init__(self, name, **kwargs):
+    def __init__(self, name):
         self.name = name
         self.options = kwargs
 
