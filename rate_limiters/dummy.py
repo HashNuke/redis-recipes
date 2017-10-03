@@ -6,5 +6,4 @@ class DummyRateLimiter:
     def can_allow(self, scope):
         if scope == "1":
           return False
-        else:
-          return True
+        return True
